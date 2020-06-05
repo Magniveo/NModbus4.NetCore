@@ -26,7 +26,7 @@
         private byte[] _messageFrame;
 
         public ModbusMasterSerialTcpConnection(TcpClient client, ModbusSerialSlaveTcp slave)
-            : base(new ModbusIpTransport(new TcpClientAdapter(client)))
+            : base(new ModbusRtuTransport(new TcpClientAdapter(client)))
         {
             if (client == null)
             {
@@ -123,9 +123,9 @@
                 // perform action and build response
                 IModbusMessage response = _slave.ApplyRequest(request);
                 response.TransactionId = request.TransactionId;
-
                 // write response
                 byte[] responseFrame = Transport.BuildMessageFrame(response);
+
                 Debug.WriteLine($"TX to Master at {EndPoint}: {string.Join(", ", responseFrame)}");
                 await Stream.WriteAsync(responseFrame, 0, responseFrame.Length).ConfigureAwait(false);
             }
