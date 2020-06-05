@@ -14,18 +14,18 @@
     /// <summary>
     /// Represents an incoming connection from a Modbus master. Contains the slave's logic to process the connection.
     /// </summary>
-    internal class ModbusMasterTcpConnection : ModbusDevice, IDisposable
+    internal class ModbusMasterSerialTcpConnection : ModbusDevice, IDisposable
     {
         private readonly TcpClient _client;
         private readonly string _endPoint;
         private readonly Stream _stream;
-        private readonly ModbusTcpSlave _slave;
+        private readonly ModbusSerialSlaveTcp _slave;
         private readonly Task _requestHandlerTask;
 
         private readonly byte[] _mbapHeader = new byte[6];
         private byte[] _messageFrame;
 
-        public ModbusMasterTcpConnection(TcpClient client, ModbusTcpSlave slave)
+        public ModbusMasterSerialTcpConnection(TcpClient client, ModbusSerialSlaveTcp slave)
             : base(new ModbusIpTransport(new TcpClientAdapter(client)))
         {
             if (client == null)
@@ -73,7 +73,20 @@
 
             base.Dispose(disposing);
         }
+        private ModbusSerialTransport SerialTransport
+        {
+            get
+            {
+                var transport = Transport as ModbusSerialTransport;
 
+                if (transport == null)
+                {
+                    throw new ObjectDisposedException("SerialTransport");
+                }
+
+                return transport;
+            }
+        }
         private async Task HandleRequestAsync()
         {
             while (true)
@@ -103,8 +116,8 @@
                 Debug.WriteLine($"Read frame from Master at {EndPoint} completed {readBytes} bytes");
                 byte[] frame = _mbapHeader.Concat(_messageFrame).ToArray();
                 Debug.WriteLine($"RX from Master at {EndPoint}: {string.Join(", ", frame)}");
-
-                var request = ModbusMessageFactory.CreateModbusRequest(_messageFrame);
+                
+                var request = ModbusMessageFactory.CreateModbusRequest(_mbapHeader);
                 request.TransactionId = (ushort)IPAddress.NetworkToHostOrder(BitConverter.ToInt16(frame, 0));
 
                 // perform action and build response
