@@ -91,35 +91,31 @@
         {
             while (true)
             {
-                byte[] frameStartRTU = await Read(7);
-                byte[] frameEndRTU = await Read(ModbusRtuTransport.RequestBytesToRead(frameStartRTU));
+                byte[] frameStartRTU = new byte[7];// await Read(7);
+                int readBytes = await Stream.ReadAsync(frameStartRTU, 0, 7).ConfigureAwait(false);
+                if (readBytes == 0)
+                {
+                    Debug.WriteLine($"0 bytes read, Master at {EndPoint} has closed Socket connection.");
+                    ModbusMasterTcpConnectionClosed?.Invoke(this, new TcpConnectionEventArgs(EndPoint));
+                    return;
+                }
+                var countEndRTU = ModbusRtuTransport.RequestBytesToRead(frameStartRTU);
+                byte[] frameEndRTU = new byte[countEndRTU];
+                int endBytes = await Stream.ReadAsync(frameEndRTU, 0, countEndRTU).ConfigureAwait(false);// await Read(ModbusRtuTransport.RequestBytesToRead(frameStartRTU));
+                if (endBytes == 0)
+                {
+                    Debug.WriteLine($"0 bytes read, Master at {EndPoint} has closed Socket connection.");
+                    ModbusMasterTcpConnectionClosed?.Invoke(this, new TcpConnectionEventArgs(EndPoint));
+                    return;
+                }
                 byte[] frameRTU = Enumerable.Concat(frameStartRTU, frameEndRTU).ToArray();
 
                 Debug.WriteLine($"Begin reading header from Master at IP: {EndPoint}");
 
-                //int readBytes = await Stream.ReadAsync(_mbapHeader, 0, 6).ConfigureAwait(false);
-                //if (readBytes == 0)
-                //{
-                //    Debug.WriteLine($"0 bytes read, Master at {EndPoint} has closed Socket connection.");
-                //    ModbusMasterTcpConnectionClosed?.Invoke(this, new TcpConnectionEventArgs(EndPoint));
-                //    return;
-                //}
+                Debug.WriteLine($"Master at {EndPoint} sent header: \"{string.Join(", ", frameStartRTU)}\" with {endBytes} bytes in PDU");
 
-                //ushort frameLength = (ushort)IPAddress.HostToNetworkOrder(BitConverter.ToInt16(_mbapHeader, 4));
-                //Debug.WriteLine($"Master at {EndPoint} sent header: \"{string.Join(", ", _mbapHeader)}\" with {frameLength} bytes in PDU");
-
-                //_messageFrame = new byte[frameLength];
-                //readBytes = await Stream.ReadAsync(_messageFrame, 0, frameLength).ConfigureAwait(false);
-                //if (readBytes == 0)
-                //{
-                //    Debug.WriteLine($"0 bytes read, Master at {EndPoint} has closed Socket connection.");
-                //    ModbusMasterTcpConnectionClosed?.Invoke(this, new TcpConnectionEventArgs(EndPoint));
-                //    return;
-                //}
-
-                //Debug.WriteLine($"Read frame from Master at {EndPoint} completed {readBytes} bytes");
-                //byte[] frame = _mbapHeader.Concat(_messageFrame).ToArray();
-                //Debug.WriteLine($"RX from Master at {EndPoint}: {string.Join(", ", frame)}");
+                Debug.WriteLine($"Read frame from Master at {EndPoint} completed {readBytes} bytes");
+                Debug.WriteLine($"RX from Master at {EndPoint}: {string.Join(", ", frameRTU)}");
                 
                 var request = ModbusMessageFactory.CreateModbusRequest(frameRTU);
                 request.TransactionId = (ushort)IPAddress.NetworkToHostOrder(BitConverter.ToInt16(frameRTU, 0));

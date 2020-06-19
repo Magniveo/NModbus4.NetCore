@@ -11,7 +11,7 @@ namespace Samples
         static void Main(string[] args)
         {
             List<ModbusSlave> lstDevice = new List<ModbusSlave>();
-            for (int i = 0; i < 1000; i++) 
+            for (int i = 0; i < 100; i++) 
             {
                 TcpListener listener = new TcpListener(IPAddress.Any, 40022+i);//for test
                 var slaveTCP = ModbusSerialSlaveTcp.CreateTcp(1, listener);
