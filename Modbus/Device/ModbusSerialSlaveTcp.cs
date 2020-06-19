@@ -199,5 +199,15 @@
 
             Debug.WriteLine($"Removed Master {e.EndPoint}");
         }
+
+        public static Message.IModbusMessage SlaveRequestApply(ModbusSlave slave, Message.IModbusMessage request)
+        {
+            return slave.ApplyRequest(request);
+        }
+        public int GetPortListener() 
+        {
+
+            return ((System.Net.IPEndPoint)_server.LocalEndpoint).Port;
+        }
     }
 }

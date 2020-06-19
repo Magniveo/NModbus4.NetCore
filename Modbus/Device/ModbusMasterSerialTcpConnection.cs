@@ -24,7 +24,7 @@
 
         private readonly byte[] _mbapHeader = new byte[6];
         private byte[] _messageFrame;
-
+        private byte[] _crc;
         public ModbusMasterSerialTcpConnection(TcpClient client, ModbusSerialSlaveTcp slave)
             : base(new ModbusRtuTransport(new TcpClientAdapter(client)))
         {
@@ -91,34 +91,38 @@
         {
             while (true)
             {
+                byte[] frameStartRTU = await Read(7);
+                byte[] frameEndRTU = await Read(ModbusRtuTransport.RequestBytesToRead(frameStartRTU));
+                byte[] frameRTU = Enumerable.Concat(frameStartRTU, frameEndRTU).ToArray();
+
                 Debug.WriteLine($"Begin reading header from Master at IP: {EndPoint}");
 
-                int readBytes = await Stream.ReadAsync(_mbapHeader, 0, 6).ConfigureAwait(false);
-                if (readBytes == 0)
-                {
-                    Debug.WriteLine($"0 bytes read, Master at {EndPoint} has closed Socket connection.");
-                    ModbusMasterTcpConnectionClosed?.Invoke(this, new TcpConnectionEventArgs(EndPoint));
-                    return;
-                }
+                //int readBytes = await Stream.ReadAsync(_mbapHeader, 0, 6).ConfigureAwait(false);
+                //if (readBytes == 0)
+                //{
+                //    Debug.WriteLine($"0 bytes read, Master at {EndPoint} has closed Socket connection.");
+                //    ModbusMasterTcpConnectionClosed?.Invoke(this, new TcpConnectionEventArgs(EndPoint));
+                //    return;
+                //}
 
-                ushort frameLength = (ushort)IPAddress.HostToNetworkOrder(BitConverter.ToInt16(_mbapHeader, 4));
-                Debug.WriteLine($"Master at {EndPoint} sent header: \"{string.Join(", ", _mbapHeader)}\" with {frameLength} bytes in PDU");
+                //ushort frameLength = (ushort)IPAddress.HostToNetworkOrder(BitConverter.ToInt16(_mbapHeader, 4));
+                //Debug.WriteLine($"Master at {EndPoint} sent header: \"{string.Join(", ", _mbapHeader)}\" with {frameLength} bytes in PDU");
 
-                _messageFrame = new byte[frameLength];
-                readBytes = await Stream.ReadAsync(_messageFrame, 0, frameLength).ConfigureAwait(false);
-                if (readBytes == 0)
-                {
-                    Debug.WriteLine($"0 bytes read, Master at {EndPoint} has closed Socket connection.");
-                    ModbusMasterTcpConnectionClosed?.Invoke(this, new TcpConnectionEventArgs(EndPoint));
-                    return;
-                }
+                //_messageFrame = new byte[frameLength];
+                //readBytes = await Stream.ReadAsync(_messageFrame, 0, frameLength).ConfigureAwait(false);
+                //if (readBytes == 0)
+                //{
+                //    Debug.WriteLine($"0 bytes read, Master at {EndPoint} has closed Socket connection.");
+                //    ModbusMasterTcpConnectionClosed?.Invoke(this, new TcpConnectionEventArgs(EndPoint));
+                //    return;
+                //}
 
-                Debug.WriteLine($"Read frame from Master at {EndPoint} completed {readBytes} bytes");
-                byte[] frame = _mbapHeader.Concat(_messageFrame).ToArray();
-                Debug.WriteLine($"RX from Master at {EndPoint}: {string.Join(", ", frame)}");
+                //Debug.WriteLine($"Read frame from Master at {EndPoint} completed {readBytes} bytes");
+                //byte[] frame = _mbapHeader.Concat(_messageFrame).ToArray();
+                //Debug.WriteLine($"RX from Master at {EndPoint}: {string.Join(", ", frame)}");
                 
-                var request = ModbusMessageFactory.CreateModbusRequest(_mbapHeader);
-                request.TransactionId = (ushort)IPAddress.NetworkToHostOrder(BitConverter.ToInt16(frame, 0));
+                var request = ModbusMessageFactory.CreateModbusRequest(frameRTU);
+                request.TransactionId = (ushort)IPAddress.NetworkToHostOrder(BitConverter.ToInt16(frameRTU, 0));
 
                 // perform action and build response
                 IModbusMessage response = _slave.ApplyRequest(request);
@@ -129,6 +133,18 @@
                 Debug.WriteLine($"TX to Master at {EndPoint}: {string.Join(", ", responseFrame)}");
                 await Stream.WriteAsync(responseFrame, 0, responseFrame.Length).ConfigureAwait(false);
             }
+        }
+        public async Task<byte[]> Read(int count)
+        {
+            byte[] frameBytes = new byte[count];
+            int numBytesRead = 0;
+
+            while (numBytesRead != count)
+            {
+                numBytesRead += await Stream.ReadAsync(frameBytes, numBytesRead, count - numBytesRead);
+            }
+
+            return frameBytes;
         }
     }
 }

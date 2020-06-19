@@ -1,5 +1,6 @@
 ﻿using Modbus.Device;
 using System;
+using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
 
@@ -9,23 +10,31 @@ namespace Samples
     {
         static void Main(string[] args)
         {
-            TcpListener listener = new TcpListener(IPAddress.Parse("127.0.0.1"), 502);//for test
-            var slaveTCP = ModbusSerialSlaveTcp.CreateTcp(1, listener);
-            slaveTCP.ModbusSlaveRequestReceived += Slave_ModbusSlaveRequestReceived;
-            Listen(slaveTCP);
-
-            TcpListener listener2 = new TcpListener(IPAddress.Parse("127.0.0.1"), 503);//for test
-            var slaveserTCP = ModbusTcpSlave.CreateTcp(1, listener2);
-            slaveserTCP.ModbusSlaveRequestReceived += Slave_ModbusSlaveRequestReceived;
-
-            //var slvRTU = ModbusSerialSlave.CreateRtu(1, listener2);
+            List<ModbusSlave> lstDevice = new List<ModbusSlave>();
+            for (int i = 0; i < 1000; i++) 
+            {
+                TcpListener listener = new TcpListener(IPAddress.Any, 40022+i);//for test
+                var slaveTCP = ModbusSerialSlaveTcp.CreateTcp(1, listener);
+                slaveTCP.ModbusSlaveRequestReceived += Slave_ModbusSlaveRequestReceived;
+                lstDevice.Add(slaveTCP);
+            }
+            StartListListen(lstDevice);
             Console.ReadLine();
         }
         private static async void Slave_ModbusSlaveRequestReceived(object sender, ModbusSlaveRequestEventArgs e)
         {
             ModbusSerialSlaveTcp slave = sender as ModbusSerialSlaveTcp;
-            slave.DataStore.HoldingRegisters[1] = 1;
-            slave.DataStore.HoldingRegisters[2] = 2;
+            for (int i = 1; i < 43; i++) 
+            {
+                Random rnd = new Random();
+                slave.DataStore.HoldingRegisters[i] =(ushort) rnd.Next(1,42);
+            }
+            GC.Collect();
+        }
+        private static void StartListListen(List<ModbusSlave> lstDevice) 
+        {
+            foreach (var slv in lstDevice)
+                Listen((ModbusSerialSlaveTcp)slv);
         }
         private static async void Listen(ModbusSerialSlaveTcp slaveTCP) 
         {
