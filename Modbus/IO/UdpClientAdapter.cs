@@ -21,12 +21,7 @@
 
         public UdpClientAdapter(UdpClient udpClient)
         {
-            if (udpClient == null)
-            {
-                throw new ArgumentNullException(nameof(udpClient));
-            }
-
-            _udpClient = udpClient;
+            _udpClient = udpClient ?? throw new ArgumentNullException(nameof(udpClient));
         }
 
         public int InfiniteTimeout

@@ -6,6 +6,7 @@
     using System.Diagnostics;
     using System.Linq;
     using System.Net.Sockets;
+    using System.Threading;
     using System.Threading.Tasks;
 #if TIMER
     using System.Timers;
@@ -30,12 +31,7 @@
         private ModbusSerialSlaveTcp(byte unitId, TcpListener tcpListener)
             : base(unitId, new EmptyTransport())
         {
-            if (tcpListener == null)
-            {
-                throw new ArgumentNullException(nameof(tcpListener));
-            }
-
-            _server = tcpListener;
+            _server = tcpListener ?? throw new ArgumentNullException(nameof(tcpListener));
         }
 
 #if TIMER
@@ -121,7 +117,28 @@
                 _masters.TryAdd(client.Client.RemoteEndPoint.ToString(), masterConnection);
             }
         }
+        /// <summary>
+        ///     Start slave listening for requests with CancellationToken.
+        /// </summary>
+        public async Task ListenAsync(CancellationToken stoppingToken)
+        {
+            //var cancellation = new CancellationTokenSource();
+            //await Task.Run(() => listener.AcceptTcpClientAsync(), cancellation.Token);
 
+            //// somewhere in another thread
+            //cancellation.Cancel();
+            Debug.WriteLine("Start Modbus Tcp Server.");
+            // TODO: add state {stoped, listening} and check it before starting
+            Server.Start();
+
+            while (true)
+            {
+                TcpClient client = await Server.AcceptTcpClientAsync().ConfigureAwait(false);
+                var masterConnection = new ModbusMasterSerialTcpConnection(client, this);
+                masterConnection.ModbusMasterTcpConnectionClosed += OnMasterConnectionClosedHandler;
+                _masters.TryAdd(client.Client.RemoteEndPoint.ToString(), masterConnection);
+            }
+        }
         /// <summary>
         ///     Releases unmanaged and - optionally - managed resources
         /// </summary>
@@ -154,9 +171,7 @@
 
                             foreach (var key in _masters.Keys)
                             {
-                                ModbusMasterSerialTcpConnection connection;
-
-                                if (_masters.TryRemove(key, out connection))
+                                if (_masters.TryRemove(key, out ModbusMasterSerialTcpConnection connection))
                                 {
                                     connection.ModbusMasterTcpConnectionClosed -= OnMasterConnectionClosedHandler;
                                     connection.Dispose();

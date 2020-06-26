@@ -28,20 +28,10 @@
         public ModbusMasterSerialTcpConnection(TcpClient client, ModbusSerialSlaveTcp slave)
             : base(new ModbusRtuTransport(new TcpClientAdapter(client)))
         {
-            if (client == null)
-            {
-                throw new ArgumentNullException(nameof(client));
-            }
-
-            if (slave == null)
-            {
-                throw new ArgumentNullException(nameof(slave));
-            }
-
-            _client = client;
+            _client = client ?? throw new ArgumentNullException(nameof(client));
+            _slave = slave ?? throw new ArgumentNullException(nameof(slave));
             _endPoint = client.Client.RemoteEndPoint.ToString();
             _stream = client.GetStream();
-            _slave = slave;
             _requestHandlerTask = Task.Run((Func<Task>)HandleRequestAsync);
         }
         /// <summary>
@@ -73,11 +63,11 @@
 
             base.Dispose(disposing);
         }
-        private ModbusSerialTransport SerialTransport
+        private ModbusRtuTransport RtuTransport
         {
             get
             {
-                var transport = Transport as ModbusSerialTransport;
+                var transport = Transport as ModbusRtuTransport;
 
                 if (transport == null)
                 {
@@ -127,6 +117,7 @@
                 byte[] responseFrame = Transport.BuildMessageFrame(response);
 
                 Debug.WriteLine($"TX to Master at {EndPoint}: {string.Join(", ", responseFrame)}");
+                
                 await Stream.WriteAsync(responseFrame, 0, responseFrame.Length).ConfigureAwait(false);
             }
         }

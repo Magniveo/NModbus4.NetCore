@@ -26,14 +26,14 @@ namespace Modbus.Device
         {
             get
             {
-                var transport = Transport as ModbusSerialTransport;
-
-                if (transport == null)
+                using (var transport = Transport as ModbusSerialTransport)
                 {
-                    throw new ObjectDisposedException("SerialTransport");
+                    if (transport == null)
+                    {
+                        throw new ObjectDisposedException("SerialTransport");
+                    }
+                    return transport;
                 }
-
-                return transport;
             }
         }
 
