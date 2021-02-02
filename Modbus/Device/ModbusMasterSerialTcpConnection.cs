@@ -81,43 +81,42 @@
         {
             while (true)
             {
-                byte[] frameStartRTU = new byte[7];// await Read(7);
-                int readBytes = await Stream.ReadAsync(frameStartRTU, 0, 7).ConfigureAwait(false);
+                Debug.WriteLine($"Begin reading header from Master at IP: {EndPoint}");
+
+                int readBytes = await Stream.ReadAsync(_mbapHeader, 0, 7).ConfigureAwait(false);
                 if (readBytes == 0)
                 {
                     Debug.WriteLine($"0 bytes read, Master at {EndPoint} has closed Socket connection.");
                     ModbusMasterTcpConnectionClosed?.Invoke(this, new TcpConnectionEventArgs(EndPoint));
                     return;
                 }
-                var countEndRTU = ModbusRtuTransport.RequestBytesToRead(frameStartRTU);
-                byte[] frameEndRTU = new byte[countEndRTU];
-                int endBytes = await Stream.ReadAsync(frameEndRTU, 0, countEndRTU).ConfigureAwait(false);// await Read(ModbusRtuTransport.RequestBytesToRead(frameStartRTU));
-                if (endBytes == 0)
+
+                ushort frameLength = (ushort)IPAddress.HostToNetworkOrder(BitConverter.ToInt16(_mbapHeader, 4));
+                Debug.WriteLine($"Master at {EndPoint} sent header: \"{string.Join(", ", _mbapHeader)}\" with {frameLength} bytes in PDU");
+
+                _messageFrame = new byte[frameLength];
+                readBytes = await Stream.ReadAsync(_messageFrame, 0, frameLength).ConfigureAwait(false);
+                if (readBytes == 0)
                 {
                     Debug.WriteLine($"0 bytes read, Master at {EndPoint} has closed Socket connection.");
                     ModbusMasterTcpConnectionClosed?.Invoke(this, new TcpConnectionEventArgs(EndPoint));
                     return;
                 }
-                byte[] frameRTU = Enumerable.Concat(frameStartRTU, frameEndRTU).ToArray();
-
-                Debug.WriteLine($"Begin reading header from Master at IP: {EndPoint}");
-
-                Debug.WriteLine($"Master at {EndPoint} sent header: \"{string.Join(", ", frameStartRTU)}\" with {endBytes} bytes in PDU");
 
                 Debug.WriteLine($"Read frame from Master at {EndPoint} completed {readBytes} bytes");
-                Debug.WriteLine($"RX from Master at {EndPoint}: {string.Join(", ", frameRTU)}");
-                
-                var request = ModbusMessageFactory.CreateModbusRequest(frameRTU);
-                request.TransactionId = (ushort)IPAddress.NetworkToHostOrder(BitConverter.ToInt16(frameRTU, 0));
+                byte[] frame = _mbapHeader.Concat(_messageFrame).ToArray();
+                Debug.WriteLine($"RX from Master at {EndPoint}: {string.Join(", ", frame)}");
+
+                var request = ModbusMessageFactory.CreateModbusRequest(frame);
+                request.TransactionId = (ushort)IPAddress.NetworkToHostOrder(BitConverter.ToInt16(frame, 0));
 
                 // perform action and build response
                 IModbusMessage response = _slave.ApplyRequest(request);
                 response.TransactionId = request.TransactionId;
+
                 // write response
                 byte[] responseFrame = Transport.BuildMessageFrame(response);
-
                 Debug.WriteLine($"TX to Master at {EndPoint}: {string.Join(", ", responseFrame)}");
-                
                 await Stream.WriteAsync(responseFrame, 0, responseFrame.Length).ConfigureAwait(false);
             }
         }
