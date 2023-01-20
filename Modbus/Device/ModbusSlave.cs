@@ -1,4 +1,6 @@
-﻿namespace Modbus.Device
+﻿using System.Threading;
+
+namespace Modbus.Device
 {
     using System;
     using System.Diagnostics;
@@ -48,7 +50,7 @@
         ///     Start slave listening for requests.
         /// </summary>
         public abstract Task ListenAsync();
-
+        public abstract Task ListenAsync(CancellationToken token);
         internal static ReadCoilsInputsResponse ReadDiscretes(
             ReadCoilsInputsRequest request,
             DataStore dataStore,

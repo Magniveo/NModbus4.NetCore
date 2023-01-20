@@ -1,4 +1,6 @@
-﻿namespace Modbus.Device
+﻿using System.Threading;
+
+namespace Modbus.Device
 {
     using System;
     using System.Collections.Concurrent;
@@ -121,7 +123,20 @@
                 _masters.TryAdd(client.Client.RemoteEndPoint.ToString(), masterConnection);
             }
         }
+        public override async Task ListenAsync(CancellationToken stoppingToken)
+        {
+            Debug.WriteLine("Start Modbus Tcp Server.");
+            // TODO: add state {stoped, listening} and check it before starting
+            Server.Start();
 
+            while (!stoppingToken.IsCancellationRequested)
+            {
+                TcpClient client = await Server.AcceptTcpClientAsync(stoppingToken).ConfigureAwait(false);
+                var masterConnection = new ModbusMasterTcpConnection(client, this);
+                masterConnection.ModbusMasterTcpConnectionClosed += OnMasterConnectionClosedHandler;
+                _masters.TryAdd(client.Client.RemoteEndPoint.ToString(), masterConnection);
+            }
+        }
         /// <summary>
         ///     Releases unmanaged and - optionally - managed resources
         /// </summary>

@@ -18,6 +18,7 @@
     /// </summary>
     public class ModbusSerialSlaveTcp : ModbusSlave
     {
+        private string ClientEndPoint { get; set; }
         private const int TimeWaitResponse = 1000;
         private readonly object _serverLock = new object();
 
@@ -115,12 +116,13 @@
                 var masterConnection = new ModbusMasterSerialTcpConnection(client, this);
                 masterConnection.ModbusMasterTcpConnectionClosed += OnMasterConnectionClosedHandler;
                 _masters.TryAdd(client.Client.RemoteEndPoint.ToString(), masterConnection);
+                Debug.WriteLine($"Conected device - {client.Client.RemoteEndPoint.ToString()}");
             }
         }
         /// <summary>
         ///     Start slave listening for requests with CancellationToken.
         /// </summary>
-        public async Task ListenAsync(CancellationToken stoppingToken)
+        public override async Task ListenAsync(CancellationToken stoppingToken)
         {
             //var cancellation = new CancellationTokenSource();
             //await Task.Run(() => listener.AcceptTcpClientAsync(), cancellation.Token);
@@ -131,9 +133,9 @@
             // TODO: add state {stoped, listening} and check it before starting
             Server.Start();
 
-            while (true)
+            while (!stoppingToken.IsCancellationRequested)
             {
-                TcpClient client = await Server.AcceptTcpClientAsync().ConfigureAwait(false);
+                var client = await Server.AcceptTcpClientAsync(stoppingToken).ConfigureAwait(false);
                 var masterConnection = new ModbusMasterSerialTcpConnection(client, this);
                 masterConnection.ModbusMasterTcpConnectionClosed += OnMasterConnectionClosedHandler;
                 _masters.TryAdd(client.Client.RemoteEndPoint.ToString(), masterConnection);
@@ -221,8 +223,15 @@
         }
         public int GetPortListener() 
         {
-
-            return ((System.Net.IPEndPoint)_server.LocalEndpoint).Port;
+            return _server == null? 0:((System.Net.IPEndPoint)_server.LocalEndpoint).Port;
+        }
+        public void SetEndPointClient(string Val) 
+        {
+            ClientEndPoint = Val;
+        }
+        public string GetEndPointClient() 
+        {
+            return ClientEndPoint;
         }
     }
 }

@@ -1,4 +1,6 @@
-﻿namespace Modbus.Device
+﻿using System.Threading;
+
+namespace Modbus.Device
 {
     using System;
     using System.Diagnostics;
@@ -82,6 +84,11 @@
                     throw;
                 }
             }
+        }
+
+        public override Task ListenAsync(CancellationToken token)
+        {
+            throw new NotImplementedException();
         }
     }
 }

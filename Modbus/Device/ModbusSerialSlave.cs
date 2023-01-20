@@ -1,4 +1,5 @@
-﻿using Modbus.Serial;
+﻿using System.Threading;
+using Modbus.Serial;
 
 namespace Modbus.Device
 {
@@ -26,14 +27,11 @@ namespace Modbus.Device
         {
             get
             {
-                using (var transport = Transport as ModbusSerialTransport)
+                if (!(Transport is ModbusSerialTransport transport))
                 {
-                    if (transport == null)
-                    {
-                        throw new ObjectDisposedException("SerialTransport");
-                    }
-                    return transport;
+                    throw new ObjectDisposedException("SerialTransport");
                 }
+                return transport;
             }
         }
 
@@ -150,6 +148,11 @@ namespace Modbus.Device
                     break;
                 }
             }
+        }
+
+        public override Task ListenAsync(CancellationToken token)
+        {
+            throw new NotImplementedException();
         }
     }
 }

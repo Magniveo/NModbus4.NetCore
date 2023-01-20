@@ -1,17 +1,17 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <TargetFramework>net6.0</TargetFramework>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <PackageId>NModbus4.NetCore</PackageId>
     <Authors>Hakan FISTIK</Authors>
-    <Description>This library is driven from this library https://github.com/NModbus4/NModbus4. It just target .NET Core instead of .NET Framework</Description>
+    <Description>This library is driven from this library https://github.com/NModbus4/NModbus4. It just target .NET Core instead of .NET Framework. Added Serial tcp slave its rtu over tcp slave. Will refactoring</Description>
     <PackageProjectUrl>https://github.com/HakamFostok/NModbus4.NetCore</PackageProjectUrl>
     <RepositoryUrl>https://github.com/HakamFostok/NModbus4.NetCore</RepositoryUrl>
     <PackageLicenseFile>LICENSE</PackageLicenseFile>
-    <AssemblyVersion>1.0.1.0</AssemblyVersion>
-    <FileVersion>1.0.1.0</FileVersion>
-    <Version>1.0.1</Version>
+    <AssemblyVersion>1.0.2.0</AssemblyVersion>
+    <FileVersion>1.0.2.0</FileVersion>
+    <Version>1.0.2</Version>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
