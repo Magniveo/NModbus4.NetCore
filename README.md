@@ -1,4 +1,3 @@
-For make application all OS use Electron.NET(https://github.com/ElectronNET/Electron.NET)
 NModbus
 =======
 
@@ -12,7 +11,8 @@ History
 The NModbus4 project appears to have gone quiet. This is a fork of that project.
 
 - NModbus is a fork of NModbus4 (https://github.com/NModbus4/NModbus4).
-- NModbus4 is fork of NModbus(https://code.google.com/p/nmodbus).
+- After it was  HakamFostok/NModbus4.NetCore
+- Again fork NModbus(https://github.com/NModbus/NModbus)
 
 NModbus differs from NModbus4 in following:
 
@@ -35,6 +35,10 @@ To install NModbus, run the following command in the Package Manager Console
 Documentation
 =======
 Documentation is available [here](https://nmodbus.github.io/api/NModbus.html).
+
+
+=======
+For make application all OS use Electron.NET(https://github.com/ElectronNET/Electron.NET)
 
 License
 =======
