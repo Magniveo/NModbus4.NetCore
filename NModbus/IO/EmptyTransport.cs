@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading.Tasks;
 using NModbus.Logging;
 
 namespace NModbus.IO
@@ -29,7 +30,7 @@ namespace NModbus.IO
         {
             throw new NotImplementedException();
         }
-
+        
         internal override void OnValidateResponse(IModbusMessage request, IModbusMessage response)
         {
             throw new NotImplementedException();

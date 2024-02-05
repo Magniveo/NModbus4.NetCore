@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using NModbus.Extensions;
 using NModbus.Logging;
 using NModbus.Utility;

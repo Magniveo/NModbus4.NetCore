@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.IO;
 using System.Net.Sockets;
+using System.Threading;
 using System.Threading.Tasks;
 using NModbus.Logging;
 using NModbus.Message;
@@ -19,7 +20,7 @@ namespace NModbus.IO
         private int _retries = Modbus.DefaultRetries;
         private int _waitToRetryMilliseconds = Modbus.DefaultWaitToRetryMilliseconds;
         private IStreamResource _streamResource;
-
+        private readonly SemaphoreSlim _semaphore = new SemaphoreSlim(1, 1);
         /// <summary>
         ///     This constructor is called by the NullTransport.
         /// </summary>
@@ -211,7 +212,6 @@ namespace NModbus.IO
 
             return (T)response;
         }
-
         public virtual IModbusMessage CreateResponse<T>(byte[] frame)
             where T : IModbusMessage, new()
         {
@@ -293,11 +293,9 @@ namespace NModbus.IO
 
         public abstract IModbusMessage ReadResponse<T>()
             where T : IModbusMessage, new();
-
         public abstract byte[] BuildMessageFrame(IModbusMessage message);
 
         public abstract void Write(IModbusMessage message);
-
         /// <summary>
         ///     Releases unmanaged and - optionally - managed resources
         /// </summary>
