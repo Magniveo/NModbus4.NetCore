@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.Net.Sockets;
 using System.Threading;
+using System.Threading.Tasks;
 using NModbus.Unme.Common;
 
 namespace NModbus.IO
@@ -32,6 +33,11 @@ namespace NModbus.IO
         {
             get => _tcpClient.GetStream().WriteTimeout;
             set => _tcpClient.GetStream().WriteTimeout = value;
+        }
+
+        public Task<int>  ReadAsync(byte[] buffer, int offset, int count)
+        {
+            throw new NotImplementedException();
         }
 
         public void Write(byte[] buffer, int offset, int size)

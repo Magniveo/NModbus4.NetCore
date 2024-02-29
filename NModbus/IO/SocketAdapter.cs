@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.Net.Sockets;
 using System.Threading;
+using System.Threading.Tasks;
 using NModbus.Unme.Common;
 
 namespace NModbus.IO
@@ -42,6 +43,11 @@ namespace NModbus.IO
         {
             
             return _socketClient.Receive(buffer,offset,size,0);
+        }
+
+        public Task<int>  ReadAsync(byte[] buffer, int offset, int count)
+        {
+            throw new NotImplementedException();
         }
 
         public void Write(byte[] buffer, int offset, int size)

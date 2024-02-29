@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+﻿using System;
+using System.Diagnostics;
 using System.IO;
 using NModbus.Logging;
 
@@ -31,8 +32,26 @@ namespace NModbus.IO
         {
             StreamResource.DiscardInBuffer();
         }
-
         public override void Write(IModbusMessage message)
+        {
+            DiscardInBuffer();
+
+            byte[] frame = BuildMessageFrame(message);
+
+            Logger.LogFrameTx(frame);
+
+            try
+            {
+                StreamResource.Write(frame, 0, frame.Length);
+            }
+            catch (Exception e)
+            {
+                string msg = $"Error writing to stream: {e.Message}";
+                Logger.Error(msg);
+                throw new IOException(msg, e);
+            }
+        }
+        public  void Write1(IModbusMessage message)
         {
             DiscardInBuffer();
 

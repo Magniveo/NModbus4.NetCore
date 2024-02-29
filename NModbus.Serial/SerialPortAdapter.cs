@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using System.IO.Ports;
+using System.Threading.Tasks;
 using NModbus.IO;
 
 namespace NModbus.Serial
@@ -46,6 +47,11 @@ namespace NModbus.Serial
         public int Read(byte[] buffer, int offset, int count)
         {
             return _serialPort.Read(buffer, offset, count);
+        }
+
+        public async Task<int> ReadAsync(byte[] buffer, int offset, int count)
+        {
+            return await _serialPort.BaseStream.ReadAsync(buffer, offset, count);
         }
 
         public void Write(byte[] buffer, int offset, int count)

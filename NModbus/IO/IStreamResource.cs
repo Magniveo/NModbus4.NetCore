@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading.Tasks;
 
 namespace NModbus.IO
 {
@@ -36,7 +37,7 @@ namespace NModbus.IO
         /// <param name="count">The number of bytes to read.</param>
         /// <returns>The number of bytes read.</returns>
         int Read(byte[] buffer, int offset, int count);
-
+        Task<int>  ReadAsync(byte[] buffer, int offset, int count);
         /// <summary>
         ///     Writes a specified number of bytes to the port from an output buffer, starting at the specified offset.
         /// </summary>

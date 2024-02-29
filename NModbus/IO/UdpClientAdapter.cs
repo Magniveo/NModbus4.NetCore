@@ -3,6 +3,7 @@ using System.IO;
 using System.Linq;
 using System.Net.Sockets;
 using System.Threading;
+using System.Threading.Tasks;
 using NModbus.Unme.Common;
 
 namespace NModbus.IO
@@ -97,6 +98,11 @@ namespace NModbus.IO
             Buffer.BlockCopy(_buffer, count, _buffer, 0, _bufferOffset);
 
             return count;
+        }
+
+        public Task<int>  ReadAsync(byte[] buffer, int offset, int count)
+        {
+            throw new NotImplementedException();
         }
 
         public void Write(byte[] buffer, int offset, int count)
