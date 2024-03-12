@@ -92,8 +92,8 @@ namespace NModbus.Logging
                 if (logger.ShouldLog(LoggingLevel.Trace))
                 {
                     string prefix = frame.DoesCrcMatch() ? validPrefix : invalidPrefix;
-
-                    logger.Trace($"{prefix}: {string.Join(" ", frame.Select(b => b.ToString("X2")))}");
+                    
+                    logger.Trace($"{DateTime.Now.ToString("HH:mm:ss.fff")} {prefix}: {string.Join(" ", frame.Select(b => b.ToString("X2")))}");
                 }
             }
         }
