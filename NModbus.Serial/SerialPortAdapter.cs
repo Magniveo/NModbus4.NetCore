@@ -47,6 +47,7 @@ namespace NModbus.Serial
         public int Read(byte[] buffer, int offset, int count)
         {
             return _serialPort.Read(buffer, offset, count);
+            //return _serialPort.BaseStream.Read(buffer, offset, count);
         }
 
         public async Task<int> ReadAsync(byte[] buffer, int offset, int count)
@@ -56,7 +57,7 @@ namespace NModbus.Serial
 
         public void Write(byte[] buffer, int offset, int count)
         {
-            _serialPort.Write(buffer, offset, count);
+            _serialPort.BaseStream.Write(buffer, offset, count);
         }
 
         public void Dispose()

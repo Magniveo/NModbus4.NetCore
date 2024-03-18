@@ -20,7 +20,7 @@ namespace NModbus.IO
         private int _retries = Modbus.DefaultRetries;
         private int _waitToRetryMilliseconds = Modbus.DefaultWaitToRetryMilliseconds;
         private IStreamResource _streamResource;
-        private readonly SemaphoreSlim _semaphore = new SemaphoreSlim(1, 1);
+        private SemaphoreSlim _semaphore = new SemaphoreSlim(1, 1);
         /// <summary>
         ///     This constructor is called by the NullTransport.
         /// </summary>
@@ -116,7 +116,7 @@ namespace NModbus.IO
             GC.SuppressFinalize(this);
         }
 
-        public virtual T UnicastMessageOLD<T>(IModbusMessage message)
+        public virtual T UnicastMessage<T>(IModbusMessage message)
             where T : IModbusMessage, new()
         {
             IModbusMessage response = null;
@@ -215,7 +215,7 @@ namespace NModbus.IO
 
             return (T)response;
         }
-        public virtual T UnicastMessage<T>(IModbusMessage message)
+        public virtual T UnicastMessageBLABLA<T>(IModbusMessage message)
     where T : IModbusMessage, new()
 {
     IModbusMessage response = null;

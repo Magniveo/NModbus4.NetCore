@@ -58,7 +58,7 @@ namespace NModbus.IO
 
             // convert hex to bytes
             byte[] frame = ModbusUtility.HexToBytes(frameHex);
-            Logger.Trace($"RX: {string.Join(", ", frame)}");
+            Logger.Trace($"{DateTime.Now.ToString("HH:mm:ss")} RX: {string.Join(", ", frame)}");
 
             if (frame.Length < 3)
             {
