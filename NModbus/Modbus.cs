@@ -12,7 +12,7 @@
         public const byte ExceptionOffset = 128;
 
         // default setting for number of retries for IO operations
-        public const int DefaultRetries = 3;
+        public const int DefaultRetries = 1;
 
         // default number of milliseconds to wait after encountering an ACKNOWLEGE or SLAVE DEVIC BUSY slave exception response.
         public const int DefaultWaitToRetryMilliseconds = 250;

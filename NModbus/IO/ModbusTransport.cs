@@ -116,7 +116,7 @@ namespace NModbus.IO
             GC.SuppressFinalize(this);
         }
 
-        public virtual T UnicastMessage<T>(IModbusMessage message)
+        public virtual T UnicastMessageOldNew<T>(IModbusMessage message)
             where T : IModbusMessage, new()
         {
             IModbusMessage response = null;
@@ -208,6 +208,102 @@ namespace NModbus.IO
                         default:
                             // Handle other exceptions
                             throw;
+                    }
+                }
+            }
+            while (!success);
+
+            return (T)response;
+        }
+        public virtual T UnicastMessage<T>(IModbusMessage message)
+            where T : IModbusMessage, new()
+        {
+            IModbusMessage response = null;
+            int attempt = 1;
+            bool success = false;
+
+            do
+            {
+                try
+                {
+                    lock (_syncLock)
+                    {
+                        Write(message);
+
+                        bool readAgain;
+                        do
+                        {
+                            readAgain = false;
+                            response = ReadResponse<T>();
+                            var exceptionResponse = response as SlaveExceptionResponse;
+
+                            if (exceptionResponse != null)
+                            {
+                                // if SlaveExceptionCode == ACKNOWLEDGE we retry reading the response without resubmitting request
+                                readAgain = exceptionResponse.SlaveExceptionCode == SlaveExceptionCodes.Acknowledge;
+
+                                if (readAgain)
+                                {
+                                    Logger.Debug($"Received ACKNOWLEDGE slave exception response, waiting {_waitToRetryMilliseconds} milliseconds and retrying to read response.");
+                                    Sleep(WaitToRetryMilliseconds);
+                                }
+                                else
+                                {
+                                    throw new SlaveException(exceptionResponse);
+                                }
+                            }
+                            else if (ShouldRetryResponse(message, response))
+                            {
+                                readAgain = true;
+                            }
+                        }
+                        while (readAgain);
+                    }
+
+                    ValidateResponse(message, response);
+                    success = true;
+                }
+                catch (SlaveException se)
+                {
+                    if (se.SlaveExceptionCode != SlaveExceptionCodes.SlaveDeviceBusy)
+                    {
+                        throw;
+                    }
+
+                    if (SlaveBusyUsesRetryCount && attempt++ > _retries)
+                    {
+                        throw;
+                    }
+
+                    Logger.Warning($"Received SLAVE_DEVICE_BUSY exception response, waiting {_waitToRetryMilliseconds} milliseconds and resubmitting request.");
+
+                    Sleep(WaitToRetryMilliseconds);
+                }
+                catch (Exception e)
+                {
+                    if ((e is SocketException socketException && socketException.SocketErrorCode != SocketError.TimedOut)
+                        || (e.InnerException is SocketException innerSocketException && innerSocketException.SocketErrorCode != SocketError.TimedOut))
+                    {
+                        throw;
+                    }
+                    if (e is FormatException ||
+                        e is NotImplementedException ||
+                        e is TimeoutException ||
+                        e is IOException ||
+                        e is SocketException)
+                    {
+                        Logger.Error($"{e.GetType().Name}, {(_retries - attempt + 1)} retries remaining - {e}");
+
+                        if (attempt++ > _retries)
+                        {
+                            throw;
+                        }
+
+                        Sleep(WaitToRetryMilliseconds);
+                    }
+                    else
+                    {
+                        throw;
                     }
                 }
             }
