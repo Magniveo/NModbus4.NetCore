@@ -30,7 +30,7 @@ namespace NModbus.IO
             Logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
-        internal ModbusTransport(IStreamResource streamResource, IModbusFactory modbusFactory, IModbusLogger logger) 
+        internal ModbusTransport(IStreamResource streamResource, IModbusFactory modbusFactory, IModbusLogger logger)
             : this(modbusFactory, logger)
         {
             _streamResource = streamResource ?? throw new ArgumentNullException(nameof(streamResource));
@@ -192,8 +192,8 @@ namespace NModbus.IO
                         case NotImplementedException _:
                         case TimeoutException _:
                         case NullReferenceException _:
-                        case OperationCanceledException _:   
-                        case InvalidOperationException _:    
+                        case OperationCanceledException _:
+                        case InvalidOperationException _:
                         case IOException _:
                             // Handle other types of exceptions
                             Logger.Error($"{e.GetType().Name}, {(_retries - attempt + 1)} retries remaining - {e}");
@@ -215,7 +215,81 @@ namespace NModbus.IO
 
             return (T)response;
         }
-        public virtual T UnicastMessage<T>(IModbusMessage message)
+        public virtual T UnicastMessageProblemGiga2<T>(IModbusMessage message)
+            where T : IModbusMessage, new()
+        {
+            IModbusMessage response = null;
+            int attempts = 0;
+
+            lock (_syncLock)
+            {
+                while (response == null && attempts < _retries)
+                {
+                    try
+                    {
+                        Write(message);
+                        response = ReadResponse<T>();
+                    }
+                    catch (SlaveException se) when (se.SlaveExceptionCode != SlaveExceptionCodes.SlaveDeviceBusy)
+                    {
+                        throw;
+                    }
+                    catch (Exception e)
+                    {
+                        if (e is SocketException || e is FormatException || e is NotImplementedException || e is TimeoutException || e is IOException || e is TaskCanceledException)
+                        {
+                            Logger.Error($"{e.GetType().Name}, {(_retries - ++attempts)} retries remaining - {e}");
+                        }
+                        else
+                        {
+                            throw;
+                        }
+                    }
+                }
+
+                ValidateResponse(message, response);
+            }
+
+            return (T)response;
+        }
+        public virtual T UnicastMessageProblemGiga<T>(IModbusMessage message)
+            where T : IModbusMessage, new()
+        {
+            IModbusMessage response = null;
+            int attempts = 0;
+
+            while (response == null && attempts < _retries)
+            {
+                try
+                {
+                    lock (_syncLock)
+                    {
+                        Write(message);
+                        response = ReadResponse<T>();
+                    }
+
+                    ValidateResponse(message, response);
+                }
+                catch (SlaveException se) when (se.SlaveExceptionCode != SlaveExceptionCodes.SlaveDeviceBusy)
+                {
+                    throw;
+                }
+                catch (Exception e)
+                {
+                    if (e is SocketException || e is FormatException || e is NotImplementedException || e is TimeoutException || e is IOException)
+                    {
+                        Logger.Error($"{e.GetType().Name}, {(_retries - ++attempts)} retries remaining - {e}");
+                    }
+                    else
+                    {
+                        throw;
+                    }
+                }
+            }
+
+            return (T)response;
+        }
+        public virtual T UnicastMessageProblem<T>(IModbusMessage message)
             where T : IModbusMessage, new()
         {
             IModbusMessage response = null;
@@ -311,7 +385,108 @@ namespace NModbus.IO
 
             return (T)response;
         }
-        public virtual T UnicastMessageBLABLA<T>(IModbusMessage message)
+
+        public virtual T UnicastMessage<T>(IModbusMessage message)
+            where T : IModbusMessage, new()
+        {
+            IModbusMessage response = null;
+            int attempt = 1;
+            bool success = false;
+
+            while (!success && attempt <= _retries)
+            {
+                try
+                {
+                    _semaphore.Wait();
+                    try
+                    {
+                        Write(message);
+
+                        bool readAgain;
+                        do
+                        {
+                            readAgain = false;
+                            response = ReadResponse<T>();
+                            var exceptionResponse = response as SlaveExceptionResponse;
+
+                            if (exceptionResponse != null)
+                            {
+                                // if SlaveExceptionCode == ACKNOWLEDGE we retry reading the response without resubmitting request
+                                readAgain = exceptionResponse.SlaveExceptionCode == SlaveExceptionCodes.Acknowledge;
+
+                                if (readAgain)
+                                {
+                                    Console.WriteLine(
+                                        $"Received ACKNOWLEDGE slave exception response, waiting {_waitToRetryMilliseconds} milliseconds and retrying to read response.");
+                                    Task.Delay(_waitToRetryMilliseconds).Wait();
+                                }
+                                else
+                                {
+                                    throw new SlaveException(exceptionResponse);
+                                }
+                            }
+                            else if (ShouldRetryResponse(message, response))
+                            {
+                                readAgain = true;
+                            }
+                        } while (readAgain);
+                    }
+                    finally
+                    {
+                        _semaphore.Release();
+
+
+                        ValidateResponse(message, response);
+                        success = true;
+                    }
+                }
+                catch (SlaveException se)
+                {
+                    if (se.SlaveExceptionCode != SlaveExceptionCodes.SlaveDeviceBusy)
+                    {
+                        throw;
+                    }
+
+                    if (SlaveBusyUsesRetryCount && attempt++ > _retries)
+                    {
+                        throw;
+                    }
+
+                    Console.WriteLine(
+                        $"Received SLAVE_DEVICE_BUSY exception response, waiting {_waitToRetryMilliseconds} milliseconds and resubmitting request.");
+
+                    // Use exponential backoff to determine the wait time
+                    var waitTime = Math.Pow(2, attempt) * _waitToRetryMilliseconds;
+                    Task.Delay((int)waitTime).Wait();
+                }
+                catch (Exception e)
+                {
+                    if ((e is SocketException socketException &&
+                         socketException.SocketErrorCode != SocketError.TimedOut)
+                        || (e.InnerException is SocketException innerSocketException &&
+                            innerSocketException.SocketErrorCode != SocketError.TimedOut))
+                    {
+                        throw;
+                    }
+
+                    if (e is FormatException ||
+                        e is NotImplementedException ||
+                        e is TimeoutException ||
+                        e is IOException ||
+                        e is SocketException)
+                    {
+                        Console.WriteLine($"{e.GetType().Name}, {(_retries - attempt + 1)} retries remaining - {e}");
+                    }
+                    else
+                    {
+                        throw;
+                    }
+                }
+            }
+            return (T)response;
+        }
+
+        public virtual T UnicastMessage_synclock<T>(IModbusMessage message)
     where T : IModbusMessage, new()
 {
     IModbusMessage response = null;
